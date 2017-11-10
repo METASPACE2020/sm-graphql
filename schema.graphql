@@ -253,7 +253,6 @@ type RawOpticalImage {
 }
 
 input AddOpticalImageInput {
-  jwt: String!
   datasetId: String!
   imageUrl: String!
 
@@ -263,48 +262,44 @@ input AddOpticalImageInput {
 }
 
 type Query {
-  # If JWT is missing, only public information is returned;
-  # otherwise, user access rights are taken into account;
-  # For consistency, every query has 'jwt' parameter.
+  dataset(id: String!): Dataset
+  user(id: String!): UserProfile
+  group(id: String!): Group
+  project(id: String!): Project
 
-  dataset(jwt: String, id: String!): Dataset
-  user(jwt: String, id: String!): UserProfile
-  group(jwt: String, id: String!): Group
-  project(jwt: String, id: String!): Project
-
-  datasetByName(jwt: String, name: String!): Dataset
+  datasetByName(name: String!): Dataset
 
   allDatasets(orderBy: DatasetOrderBy = ORDER_BY_DATE,
               sortingOrder: SortingOrder = DESCENDING,
               filter: DatasetFilter = {}, simpleQuery: String,
-              offset: Int = 0, limit: Int = 10, jwt: String): [Dataset!]!
+              offset: Int = 0, limit: Int = 10): [Dataset!]!
 
   allAnnotations(orderBy: AnnotationOrderBy = ORDER_BY_MSM,
                  sortingOrder: SortingOrder = DESCENDING,
                  offset: Int = 0, limit: Int = 10,
                  filter: AnnotationFilter = {},
                  datasetFilter: DatasetFilter = {},
-                 simpleQuery: String, jwt: String): [Annotation]
+                 simpleQuery: String): [Annotation]
 
-  countDatasets(filter: DatasetFilter = {}, simpleQuery: String, jwt: String): Int!
+  countDatasets(filter: DatasetFilter = {}, simpleQuery: String): Int!
 
-  countDatasetsPerGroup(query: DatasetCountPerGroupInput!, jwt: String): DatasetCountPerGroup!
+  countDatasetsPerGroup(query: DatasetCountPerGroupInput!): DatasetCountPerGroup!
 
   countAnnotations(filter: AnnotationFilter = {},
                    datasetFilter: DatasetFilter = {},
-                   simpleQuery: String, jwt: String): Int!
+                   simpleQuery: String): Int!
 
-  annotation(id: String!, jwt: String): Annotation
+  annotation(id: String!): Annotation
 
-  metadataSuggestions(field: String!, query: String!, limit: Int = 10, jwt: String): [String!]!
+  metadataSuggestions(field: String!, query: String!, limit: Int = 10): [String!]!
 
-  peopleSuggestions(role: PersonRole!, query: String!, jwt: String): [Person!]!
+  peopleSuggestions(role: PersonRole!, query: String!): [Person!]!
 
-  molecularDatabases(jwt: String): [MolecularDatabase!]
+  molecularDatabases: [MolecularDatabase!]
 
-  opticalImageUrl(datasetId: String!, zoom: Float = 1, jwt: String): String
+  opticalImageUrl(datasetId: String!, zoom: Float = 1): String
 
-  rawOpticalImage(datasetId: String!, jwt: String): RawOpticalImage
+  rawOpticalImage(datasetId: String!): RawOpticalImage
 }
 
 input UserProfileInput {
@@ -335,41 +330,41 @@ type Status {
 }
 
 type Mutation {
-  submitDataset(jwt: String!, datasetId: String, name: String,
+  submitDataset(datasetId: String, name: String,
     path: String!, metadataJson: String!,
     priority: Int=0, sync: Boolean=true, delFirst: Boolean=false): String @deprecated(reason: "use createDataset instead")
 
-  resubmitDataset(jwt: String!, datasetId: String!,
+  resubmitDataset(datasetId: String!,
     priority: Int=0, sync: Boolean=true): String @deprecated(reason: "use updateDataset instead")
 
-  updateMetadata(jwt: String!, datasetId: String!, metadataJson: String!,
+  updateMetadata(datasetId: String!, metadataJson: String!,
     priority: Int=0, sync: Boolean=true): String @deprecated(reason: "use updateDataset instead")
 
-  deleteDataset(jwt: String!, datasetId: String!,
+  deleteDataset(datasetId: String!,
     delRawData: Boolean, sync: Boolean=true): String
 
   addOpticalImage(input: AddOpticalImageInput!): String
 
-  createDataset(jwt: String!, dataset: DatasetInput!): Status
-  updateDataset(jwt: String!, dataset: DatasetInput!): Status
+  createDataset(dataset: DatasetInput!): Status
+  updateDataset(dataset: DatasetInput!): Status
 
-  createUserProfile(jwt: String!, user: UserProfileInput!): Status
-  updateUserProfile(jwt: String!, user: UserProfileInput!): Status
-  deleteUserProfile(jwt: String!): Status # users can only delete their own profiles
+  createUserProfile(user: UserProfileInput!): Status
+  updateUserProfile(user: UserProfileInput!): Status
+  deleteUserProfile: Status # users can only delete their own profiles
 
-  addUserToGroup(jwt: String!, userId: String!, groupId: String!, role: Role!): Status
-  removeUserFromGroup(jwt: String!, userId: String!, groupId: String!): Status
+  addUserToGroup(userId: String!, groupId: String!, role: Role!): Status
+  removeUserFromGroup(userId: String!, groupId: String!): Status
 
-  createProject(jwt: String!, name: String!, private: Boolean!): Status
-  updateProject(jwt: String!, id: String!, private: Boolean!): Status
-  deleteProject(jwt: String!, id: String!): Status
-  addDatasetToProject(jwt: String!, datasetId: String!, projectId: String!): Status
-  removeDatasetFromProject(jwt: String!, datasetId: String!, projectId: String!): Status
-  addUserToProject(jwt: String!, userId: String!, projectId: String!, role: Role!): Status
-  removeUserFromProject(jwt: String!, userId: String!, projectId: String!): Status
+  createProject(name: String!, private: Boolean!): Status
+  updateProject(id: String!, private: Boolean!): Status
+  deleteProject(id: String!): Status
+  addDatasetToProject(datasetId: String!, projectId: String!): Status
+  removeDatasetFromProject(datasetId: String!, projectId: String!): Status
+  addUserToProject(userId: String!, projectId: String!, role: Role!): Status
+  removeUserFromProject(userId: String!, projectId: String!): Status
 
-  askGroupInvitation(jwt: String!, groupId: String!): Status
-  askProjectInvitation(jwt: String!, projectId: String!): Status
+  askGroupInvitation(groupId: String!): Status
+  askProjectInvitation(projectId: String!): Status
 }
 
 type DatasetStatusUpdate {
