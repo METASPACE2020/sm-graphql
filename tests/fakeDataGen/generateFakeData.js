@@ -59,15 +59,13 @@ function fakeAnnotation(dataset) {
     dataset,
     sumFormula: faker.random.arrayElement(MOL_FORMULAS),
     adduct: faker.random.arrayElement(adducts),
-    mz: faker.random.number({min: 150, max: 1200}),
+    mz: faker.random.number({min: 150, max: 1200, precision: 0.0001}),
     possibleCompounds: [fakeCompound()],
     fdrLevel: faker.random.arrayElement([0.05, 0.1, 0.2, 0.5]),
     msmScore: faker.random.number({max: 1, precision: 0.001}),
     rhoSpatial: faker.random.number({max: 1, precision: 0.001}),
     rhoSpectral: faker.random.number({max: 1, precision: 0.001}),
-    rhoChaos: faker.random.number({max: 1, precision: 0.001}),
-    isotopeImages: [{mz: 300, url: null, totalIntensity: 1}],
-    peakChartData: null // FIXME
+    rhoChaos: faker.random.number({max: 1, precision: 0.001})
   }
 }
 
@@ -76,14 +74,23 @@ function fakeDataset({submitter}) {
         group = submitter.groups[0],
         pi = group.manager,
         [pi_name, pi_surname] = pi.name.split(' ', 2);
+  let d = faker.date.recent();
+  const z = x => ("0" + x).slice(-2);
+  let id = d.getFullYear() + '-' + z(d.getMonth()+1) + "-" + z(d.getDate()) + "_" + 
+    z(d.getHours()) + "h" + z(d.getMinutes()) + "m" + z(d.getSeconds()) + "s";
+
   let ds = {
-    id: faker.random.uuid(),
+    id,
+    name: faker.system.fileName(),
+    _height: faker.random.number({min: 50, max: 150}),
+    _width: faker.random.number({min: 50, max: 150}),
     polarity: faker.random.arrayElement(['POSITIVE', 'NEGATIVE']),
     institution: submitter.groups[0].institutionName,
     submitter: {name, surname, email: submitter.email},
     principalInvestigator: {name: pi_name, surname: pi_surname, email: pi.email},
     ionisationSource: faker.random.arrayElement(['DESI', 'MALDI']),
-    analyzer: {type: faker.random.arrayElement(['Orbitrap', 'FTICR'])},
+    analyzer: {type: faker.random.arrayElement(['Orbitrap', 'FTICR']),
+               resolvingPower: 140000},
     organism: faker.random.arrayElement(['Human', 'Rat', 'Mouse', 'Kangaroo', 'Zebrafish']),
     organismPart: faker.random.arrayElement(['Brain', 'Liver', 'Lung', 'Heart', 'Tail']),
     condition: 'none',
@@ -91,7 +98,7 @@ function fakeDataset({submitter}) {
     maldiMatrix: faker.random.arrayElement(['DHB', 'none']),
     status: 'FINISHED',
     inputPath: 's3a://' + faker.system.fileName(),
-    uploadDateTime: faker.date.recent().toString(),
+    uploadDateTime: d.toString(),
     access: faker.random.arrayElement(['VIEW', 'EDIT'])
   }
 
@@ -176,20 +183,24 @@ function fakeGroup() {
 function main() {
   let annotations = [];
   let groups = [];
+  let datasets = [];
 
   let nGroups = faker.random.number({min: 3, max: 10});
   for (let i = 0; i < nGroups; i++) {
     let group = fakeGroup();
     for (let d of group.datasets) {
+      datasets.push(d);
       let n = faker.random.number({min: 1, max: 50});
       for (let i = 0; i < n; i++)
         annotations.push(fakeAnnotation(d));
     }
+    groups.push(group);
   }
 
   const objectGraph = {
     groups,
-    annotations
+    annotations,
+    datasets
   };
 
   fs.writeFileSync("fake_data.json", JSOG.stringify(objectGraph));
