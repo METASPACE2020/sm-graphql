@@ -170,7 +170,7 @@ function fakeGroup() {
     members[i].groups = [group];
     members[i].email = members[i].name.replace(/\./g, '').replace(/ /g, '.')
                                  .toLowerCase() + '@' + domain;
-    const nDatasets = faker.random.number({min: 0, max: 10});
+    const nDatasets = faker.random.number({min: 3, max: 10});
     for (let j = 0; j < nDatasets; j++) {
       let d = fakeDataset({submitter: members[i]});
       group.datasets.push(d);
@@ -180,10 +180,27 @@ function fakeGroup() {
   return group;
 }
 
+function fakeProject(users, datasets) {
+  const rnd = faker.random.arrayElement;
+
+  let project = {
+    id: faker.random.uuid(),
+    name: faker.random.word(),
+    public: rnd([true, false]),
+    members: faker.helpers.shuffle(users).slice(0, faker.random.number({min: 2, max: 20})),
+    datasets: faker.helpers.shuffle(datasets).slice(0, faker.random.number({min: 5, max: 10}))
+  };
+
+  project.manager = rnd(project.members);
+  return project;
+}
+
 function main() {
   let annotations = [];
   let groups = [];
   let datasets = [];
+  let people = [];
+  let projects = [];
 
   let nGroups = faker.random.number({min: 3, max: 10});
   for (let i = 0; i < nGroups; i++) {
@@ -194,13 +211,27 @@ function main() {
       for (let i = 0; i < n; i++)
         annotations.push(fakeAnnotation(d));
     }
+    people = people.concat(group.members);
     groups.push(group);
   }
+
+  let nProjects = faker.random.number({min: 3, max: 5});
+  for (let i = 0; i < nProjects; i++) {
+    let project = fakeProject(people, datasets);
+    project.members.forEach((member) => {
+      const idx = people.indexOf(member);
+      people[idx].projects.push(project);
+    });
+    projects.push(project);
+  }
+
 
   const objectGraph = {
     groups,
     annotations,
-    datasets
+    datasets,
+    people,
+    projects
   };
 
   fs.writeFileSync("fake_data.json", JSOG.stringify(objectGraph));

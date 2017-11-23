@@ -2,10 +2,22 @@ const {readFileSync} = require('fs');
 const JSOG = require('jsog');
 
 const data = JSOG.parse(readFileSync("fake_data.json"));
+const jwt = require('jwt-simple');
+const config = require('config');
+const {UserError} = require('graphql-errors');
 
 module.exports = {
   Query: {
-    group(_, {id}) { return data.groups.filter(g => g.id == id)[0]; },
+    group(_, {id}, ctx) {
+      if (!ctx.token)
+        throw new UserError('You must log in in order to access group information');
+      const {sub} = jwt.decode(ctx.token, config.jwt.secret);
+      const group = data.groups.filter(g => g.id == id)[0];
+      if (!group || group.members.filter(m => m.id == sub).length == 0)
+        throw new UserError('You do not have access to this group, go away!');
+      return group;
+    },
+    project(_, {id}) { return data.projects.filter(p => p.id == id)[0]; },
     dataset(_, {id}) { return data.datasets.filter(d => d.id == id)[0]; },
     annotation(_, {id}) { return data.annotations.filter(a => a.id == id)[0]; },
 
@@ -39,7 +51,7 @@ module.exports = {
     isotopeImages(a) {
       const {_width, _height} = a.dataset;
       return [{
-        minIntensity: 0, maxIntensity: 100, totalIntensity: 1000, mz: a.mz, 
+        minIntensity: 0, maxIntensity: 100, totalIntensity: 1000, mz: a.mz,
         url: 'https://picsum.photos/' + _width + '/' + _height + '/?random&did=' + a.id
       }];
     },
@@ -52,6 +64,12 @@ module.exports = {
           mzs: [a.mz], ints: [100]
         }
       });       
+    }
+  },
+
+  Mutation: {
+    removeUserFromGroup(_, {userId, groupId}, ctx) {
+      return {success: true};
     }
   }
 }

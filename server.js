@@ -44,8 +44,11 @@ function createHttpServerAsync(config) {
       app.use(compression());
       app.use('/graphql',
           bodyParser.json({type: '*/*'}),
-          graphqlExpress(request => ({schema,
-             context: { auth: request.header('Authorization') }
+          graphqlExpress(request => ({
+            schema,
+            context: {
+              token: (request.header('Authorization') || '').split('Bearer ')[1]
+            }
           })));
       app.use('/graphiql', graphiqlExpress({
         endpointURL: '/graphql',
