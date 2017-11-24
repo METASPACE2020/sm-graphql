@@ -99,7 +99,8 @@ function fakeDataset({submitter}) {
     status: 'FINISHED',
     inputPath: 's3a://' + faker.system.fileName(),
     uploadDateTime: d.toString(),
-    access: faker.random.arrayElement(['VIEW', 'EDIT'])
+    access: faker.random.arrayElement(['VIEW', 'EDIT']),
+    projects: []
   }
 
   function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -222,6 +223,12 @@ function main() {
       const idx = people.indexOf(member);
       people[idx].projects.push(project);
     });
+
+    project.datasets.forEach((ds) => {
+      const idx = datasets.indexOf(ds);
+      datasets[idx].projects.push(project);
+    });
+
     projects.push(project);
   }
 

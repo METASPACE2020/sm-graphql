@@ -6,6 +6,17 @@ const jwt = require('jwt-simple');
 const config = require('config');
 const {UserError} = require('graphql-errors');
 
+function getById(fieldName) {
+  return id => data[fieldName].filter(x => x.id == id)[0];
+}
+
+const getDataset = getById('datasets');
+const getProject = getById('projects');
+const getAnnotation = getById('annotations');
+const getUser = getById('people');
+
+console.log(data.projects[0].manager.id);
+
 module.exports = {
   Query: {
     group(_, {id}, ctx) {
@@ -17,9 +28,10 @@ module.exports = {
         throw new UserError('You do not have access to this group, go away!');
       return group;
     },
-    project(_, {id}) { return data.projects.filter(p => p.id == id)[0]; },
-    dataset(_, {id}) { return data.datasets.filter(d => d.id == id)[0]; },
-    annotation(_, {id}) { return data.annotations.filter(a => a.id == id)[0]; },
+    project: (_, {id}) => getProject(id),
+    dataset: (_, {id}) => getDataset(id),
+    annotation: (_, {id}) => getAnnotation(id),
+    user: (_, {id}) => getUser(id),
 
     allAnnotations(_, {datasetFilter, filter}) {
       // only support filtering by dataset id
@@ -70,6 +82,30 @@ module.exports = {
   Mutation: {
     removeUserFromGroup(_, {userId, groupId}, ctx) {
       return {success: true};
+    },
+
+    addDatasetToProject(_, {projectId, datasetId}) {
+      const project = getProject(projectId);
+      const dataset = getDataset(datasetId);
+      if (project.datasets.indexOf(dataset) == -1) {
+        project.datasets.push(dataset);
+        dataset.projects.push(project);
+      }
+      return {success: true}
+    },
+
+    removeDatasetFromProject(_, {projectId, datasetId}) {
+      const project = getProject(projectId);
+      const dataset = getDataset(datasetId);
+      const idxP = project.datasets.indexOf(dataset);
+      const idxD = dataset.projects.indexOf(project);
+      console.log(idxP, idxD);
+      if (idxP >= 0) {
+        project.datasets.splice(idxP, 1);
+        dataset.projects.splice(idxD, 1);
+      }
+
+      return {success: true}
     }
   }
 }
