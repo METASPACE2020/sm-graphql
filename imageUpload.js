@@ -129,7 +129,10 @@ function imageProviderFSBackend(storageRootDir) {
           let subdir = req.params.image_id.slice(0, 3),
             fname = req.params.image_id.slice(3);
           const imgPath = path.join(storageRootDir, basePath, subdir, fname);
+          const dirPath = path.join(storageRootDir, basePath, subdir);
+          console.log(dirPath)
           await fs.unlink(imgPath);
+          await fs.rmdir(dirPath);
           res.status(202).json();
         }
         catch (e) {
