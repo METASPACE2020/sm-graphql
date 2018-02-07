@@ -526,6 +526,27 @@ const Resolvers = {
         logger.error(e.message);
         return e.message;
       }
+    },
+
+    async deleteOpticalImage(_, args) {
+      let {datasetId} = args;
+      const payload = jwt.decode(args.jwt, config.jwt.secret);
+      try {
+        logger.info(args);
+        await checkPermissions(datasetId, payload);
+        const url = `http://${config.services.sm_engine_api_host}/v1/datasets/${datasetId}/del-optical-image`;
+        const body = JSON.stringify({
+            id: datasetId
+        });
+        await fetch(url, {
+          method: 'POST',
+            body: body,
+          headers: {'Content-Type': 'application/json'}});
+        return 'Image was sucessfully deleted'
+      } catch (e) {
+        logger.error(e.message);
+        return e.message;
+      }
     }
   },
 

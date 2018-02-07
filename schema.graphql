@@ -280,6 +280,8 @@ type Mutation {
     delRawData: Boolean, sync: Boolean=true): String
 
   addOpticalImage(input: AddOpticalImageInput!): String
+
+  deleteOpticalImage(jwt: String! datasetId: String!): String!
 }
 
 type DatasetStatusUpdate {
