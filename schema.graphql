@@ -44,6 +44,11 @@ enum JobStatus {
   FAILED
 }
 
+enum AccessRights {
+  VIEW
+  EDIT
+}
+
 type Dataset {
   id: String!
   name: String!
@@ -70,6 +75,35 @@ type Dataset {
   status: JobStatus
   inputPath: String
   uploadDateTime: String
+
+  access: AccessRights!
+}
+
+type UserProfile {
+  id: String!
+  name: String!
+  email: String!
+  secondaryEmails: [String!]
+  groups: [Group]
+  projects: [Project]
+}
+
+type Group {
+  id: String!
+  name: String!
+  institutionName: String!
+  members: [UserProfile]!
+  datasets: [Dataset]
+  manager: UserProfile!
+}
+
+type Project {
+  id: String!
+  name: String!
+  public: Boolean
+  members: [UserProfile]!
+  datasets: [Dataset]
+  manager: UserProfile!
 }
 
 # fields of categorical type
@@ -219,7 +253,6 @@ type RawOpticalImage {
 }
 
 input AddOpticalImageInput {
-  jwt: String!
   datasetId: String!
   imageUrl: String!
 
@@ -230,6 +263,10 @@ input AddOpticalImageInput {
 
 type Query {
   dataset(id: String!): Dataset
+  user(id: String!): UserProfile
+  group(id: String!): Group
+  project(id: String!): Project
+
   datasetByName(name: String!): Dataset
 
   allDatasets(orderBy: DatasetOrderBy = ORDER_BY_DATE,
@@ -265,21 +302,69 @@ type Query {
   rawOpticalImage(datasetId: String!): RawOpticalImage
 }
 
+input UserProfileInput {
+  id: String  # can differ from the id stored in the JWT, as group/project managers should be able to edit members' profiles
+  name: String!
+  email: String!
+}
+
+input DatasetInput {
+  id: String!
+  name: String!
+  path: String!
+  private: Boolean = true
+  sync: Boolean = true
+  priority: Int = 0
+  deleteFirst: Boolean = false
+  metadataJson: String  # absent => use currently stored metadata
+}
+
+enum Role {
+  MEMBER
+  ADMIN
+}
+
+type Status {
+  success: Boolean!
+  errorMessage: String
+}
+
 type Mutation {
-  submitDataset(jwt: String!, datasetId: String, name: String,
+  submitDataset(datasetId: String, name: String,
     path: String!, metadataJson: String!,
-    priority: Int=0, sync: Boolean=true, delFirst: Boolean=false): String
+    priority: Int=0, sync: Boolean=true, delFirst: Boolean=false): String @deprecated(reason: "use createDataset instead")
 
-  resubmitDataset(jwt: String!, datasetId: String!,
-    priority: Int=0, sync: Boolean=true): String
+  resubmitDataset(datasetId: String!,
+    priority: Int=0, sync: Boolean=true): String @deprecated(reason: "use updateDataset instead")
 
-  updateMetadata(jwt: String!, datasetId: String!, metadataJson: String!,
-    priority: Int=0, sync: Boolean=true): String
+  updateMetadata(datasetId: String!, metadataJson: String!,
+    priority: Int=0, sync: Boolean=true): String @deprecated(reason: "use updateDataset instead")
 
-  deleteDataset(jwt: String!, datasetId: String!,
+  deleteDataset(datasetId: String!,
     delRawData: Boolean, sync: Boolean=true): String
 
   addOpticalImage(input: AddOpticalImageInput!): String
+
+  createDataset(dataset: DatasetInput!): Status
+  updateDataset(dataset: DatasetInput!): Status
+
+  createUserProfile(user: UserProfileInput!): Status
+  updateUserProfile(user: UserProfileInput!): Status
+  deleteUserProfile: Status # users can only delete their own profiles
+
+  addUserToGroup(userId: String!, groupId: String!, role: Role!): Status
+  removeUserFromGroup(userId: String!, groupId: String!): Status
+
+  createProject(name: String!, private: Boolean!): Status
+  updateProject(id: String!, private: Boolean!): Status
+  deleteProject(id: String!): Status
+  addDatasetToProject(datasetId: String!, projectId: String!): Status
+  removeDatasetFromProject(datasetId: String!, projectId: String!): Status
+  addUserToProject(userId: String!, projectId: String!, role: Role!): Status
+  removeUserFromProject(userId: String!, projectId: String!): Status
+
+  askGroupInvitation(groupId: String!): Status
+  askProjectInvitation(projectId: String!): Status
 }
 
 type DatasetStatusUpdate {
