@@ -157,19 +157,31 @@ const Resolvers = {
     },
 
     opticalImageUrl(_, {datasetId, zoom}) {
-      const intZoom = zoom <= 1.5 ? 1 : (zoom <= 3 ? 2 : (zoom <= 6 ? 4 : 8));
-      return pg.select().from('optical_image')
-               .where('ds_id', '=', datasetId)
-               .where('zoom', '=', intZoom)
-               .then(records => {
-                 if (records.length > 0)
-                   return '/optical_images/' + records[0].id;
-                 else
-                   return null;
-               })
-               .catch((e) => {
-                 logger.error(e);
-               })
+      if (zoom == -1) {
+        return pg.select('id').from('optical_image')
+            .where('ds_id', '=', datasetId)
+            .then(records => {
+              if (records.length > 0) {
+                console.log(records)
+                return JSON.stringify(records);
+              }
+            })
+      }
+      else {
+        const intZoom = zoom <= 1.5 ? 1 : (zoom <= 3 ? 2 : (zoom <= 6 ? 4 : 8));
+        return pg.select().from('optical_image')
+            .where('ds_id', '=', datasetId)
+            .where('zoom', '=', intZoom)
+            .then(records => {
+                if (records.length > 0)
+                    return '/optical_images/' + records[0].id;
+                else
+                    return null;
+            })
+            .catch((e) => {
+                logger.error(e);
+            })
+      }
     },
 
     rawOpticalImage(_, {datasetId}) {
@@ -255,6 +267,10 @@ const Resolvers = {
 
     uploadDateTime(ds) {
       return ds._source.ds_upload_dt;
+    },
+
+    fdrCounts(ds) {
+      return JSON.stringify(ds._source.annotation_counts[0].counts);
     }
   },
 
@@ -542,7 +558,7 @@ const Resolvers = {
           method: 'POST',
             body: body,
           headers: {'Content-Type': 'application/json'}});
-        return 'Image was sucessfully deleted'
+        return 'Image was successfully deleted'
       } catch (e) {
         logger.error(e.message);
         return e.message;
