@@ -70,6 +70,7 @@ type Dataset {
   status: JobStatus
   inputPath: String
   uploadDateTime: String
+  fdrCounts: String
 }
 
 # fields of categorical type
@@ -280,6 +281,8 @@ type Mutation {
     delRawData: Boolean, sync: Boolean=true): String
 
   addOpticalImage(input: AddOpticalImageInput!): String
+
+  deleteOpticalImage(jwt: String! datasetId: String!): String!
 }
 
 type DatasetStatusUpdate {
