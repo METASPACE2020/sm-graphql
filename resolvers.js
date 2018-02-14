@@ -163,7 +163,6 @@ const Resolvers = {
             .where('ds_id', '=', datasetId)
             .then(records => {
               if (records.length > 0) {
-                console.log(records)
                 return JSON.stringify(records);
               }
             })
