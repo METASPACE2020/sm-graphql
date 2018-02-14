@@ -1,7 +1,7 @@
 /**
  * Created by intsco on 1/11/17.
  */
-const ES_LIMIT_MAX =  50000;
+const ES_LIMIT_MAX = 50000;
 
 const elasticsearch = require('elasticsearch'),
   sprintf = require('sprintf-js');
@@ -68,7 +68,7 @@ function constructAnnotationQuery(args, docType) {
       }
     }
   };
-    // console.info(body)
+
   if (orderBy)
     body.sort = esSort(orderBy, sortingOrder);
 
@@ -132,7 +132,6 @@ function constructAnnotationQuery(args, docType) {
     }
   }
 
-  // console.info(body.query.bool.filter)
   return body;
 }
 
@@ -148,12 +147,11 @@ module.exports.esSearchResults = function(args, docType) {
     from: args.offset,
     size: args.limit
   };
-  // logger.info(JSON.stringify(body));
+  logger.info(JSON.stringify(body));
   console.time('esQuery');
 
   return es.search(request).then((resp) => {
     console.timeEnd('esQuery');
-    // console.info(resp.hits.hits[0]._source.annotation_counts[0].counts);
     return resp.hits.hits;
   }).catch((e) => {
     logger.error(e);
@@ -164,9 +162,7 @@ module.exports.esSearchResults = function(args, docType) {
 module.exports.esCountResults = function(args, docType) {
   const body = constructAnnotationQuery(args, docType);
   const request = { body, index: esIndex };
-  // console.log(request)
   return es.count(request).then((resp) => {
-    console.log(resp)
     return resp.count;
   }).catch((e) => {
     logger.error(e);
@@ -185,7 +181,7 @@ const fieldEnumToSchemaPath = {
   DF_ORGANISM_PART: datasetFilters.organismPart.esField,
   DF_CONDITION: datasetFilters.condition.esField,
   DF_GROWTH_CONDITIONS: datasetFilters.growthConditions.esField,
-  DF_MALDI_MATRIX: datasetFilters.maldiMatrix.esField,
+  DF_MALDI_MATRIX: datasetFilters.maldiMatrix.esField
 };
 
 function addTermAggregations(requestBody, fields) {

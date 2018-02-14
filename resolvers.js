@@ -157,6 +157,7 @@ const Resolvers = {
     },
 
     opticalImageUrl(_, {datasetId, zoom}) {
+      // zoom = -1 a trick to get all optical images IDs for a single dataset
       if (zoom == -1) {
         return pg.select('id').from('optical_image')
             .where('ds_id', '=', datasetId)
