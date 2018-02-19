@@ -270,7 +270,12 @@ const Resolvers = {
     },
 
     fdrCounts(ds) {
-      return JSON.stringify(ds._source.annotation_counts[0].counts);
+      // Get 10% FDR string -> counts[1], 5% -> counts[0]
+      let fdrAt10Val = ds._source.annotation_counts[0].counts[1];
+      return {
+        'level': fdrAt10Val.level,
+        'counts': fdrAt10Val.n
+      };
     }
   },
 
@@ -547,17 +552,27 @@ const Resolvers = {
     async deleteOpticalImage(_, args) {
       let {datasetId} = args;
       const payload = jwt.decode(args.jwt, config.jwt.secret);
+      const basePath = `http://localhost:${config.img_storage_port}`;
       try {
-        logger.info(args);
         await checkPermissions(datasetId, payload);
-        const url = `http://${config.services.sm_engine_api_host}/v1/datasets/${datasetId}/del-optical-image`;
-        const body = JSON.stringify({
-            id: datasetId
+        let opticalImageIds = await pg.select('id').from('optical_image').where('ds_id', '=', datasetId);
+        let rawOpticalImage = await pg.select('optical_image').from('dataset').where('id','=',datasetId);
+        Array.prototype.push.apply(opticalImageIds, rawOpticalImage);
+        opticalImageIds.forEach((Image) => {
+          if (Image.id){ //to delete zoomed Image
+            let url = basePath + `${config.img_upload.categories.optical_image.path}delete/${Image.id}`;
+            fetch(url, {
+              method: 'delete'
+            })
+          } else if (Image.optical_image){ // to delete raw optical Image
+            let url = basePath +`${config.img_upload.categories.raw_optical_image.path}delete/${Image.optical_image}`;
+            fetch(url, {
+              method: 'delete'
+            })
+          }
         });
-        await fetch(url, {
-          method: 'POST',
-            body: body,
-          headers: {'Content-Type': 'application/json'}});
+        await pg('dataset').update({optical_image: pg.raw('NULL'), transform: pg.raw('NULL')}).where('id','=',datasetId);
+        await pg('optical_image').where('ds_id', '=', datasetId).del();
         return 'Image was successfully deleted'
       } catch (e) {
         logger.error(e.message);
