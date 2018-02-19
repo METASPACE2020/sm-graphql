@@ -157,31 +157,19 @@ const Resolvers = {
     },
 
     opticalImageUrl(_, {datasetId, zoom}) {
-      // zoom = -1 a trick to get all optical images IDs for a single dataset
-      if (zoom == -1) {
-        return pg.select('id').from('optical_image')
-            .where('ds_id', '=', datasetId)
-            .then(records => {
-              if (records.length > 0) {
-                return JSON.stringify(records);
-              }
-            })
-      }
-      else {
-        const intZoom = zoom <= 1.5 ? 1 : (zoom <= 3 ? 2 : (zoom <= 6 ? 4 : 8));
-        return pg.select().from('optical_image')
-            .where('ds_id', '=', datasetId)
-            .where('zoom', '=', intZoom)
-            .then(records => {
-                if (records.length > 0)
-                    return '/optical_images/' + records[0].id;
-                else
-                    return null;
-            })
-            .catch((e) => {
-                logger.error(e);
-            })
-      }
+      const intZoom = zoom <= 1.5 ? 1 : (zoom <= 3 ? 2 : (zoom <= 6 ? 4 : 8));
+      return pg.select().from('optical_image')
+          .where('ds_id', '=', datasetId)
+          .where('zoom', '=', intZoom)
+          .then(records => {
+              if (records.length > 0)
+                  return '/optical_images/' + records[0].id;
+              else
+                  return null;
+          })
+          .catch((e) => {
+              logger.error(e);
+          })
     },
 
     rawOpticalImage(_, {datasetId}) {
