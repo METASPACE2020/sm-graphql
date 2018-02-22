@@ -257,12 +257,20 @@ const Resolvers = {
       return ds._source.ds_upload_dt;
     },
 
-    fdrCounts(ds) {
-      // Get 10% FDR string -> counts[1], 5% -> counts[0]
-      let fdrAt10Val = ds._source.annotation_counts[0].counts[1];
+    fdrCounts(ds, {minFdr, maxFdr}) {
+      if (minFdr === maxFdr) {minFdr = 0}
+      let allLvlCounts = ds._source.annotation_counts[0].counts;
+      let fdrLevels = [];
+      let fdrCounts = [];
+      allLvlCounts.forEach(Level => {
+        if (Level.level >= minFdr && Level.level <= maxFdr) {
+          fdrLevels.push(Level.level);
+          fdrCounts.push(Level.n);
+        }
+      });
       return {
-        'level': fdrAt10Val.level,
-        'counts': fdrAt10Val.n
+        'levels': fdrLevels,
+        'counts': fdrCounts
       };
     }
   },
@@ -539,29 +547,27 @@ const Resolvers = {
 
     async deleteOpticalImage(_, args) {
       let {datasetId} = args;
+      let allUrls = [];
       const payload = jwt.decode(args.jwt, config.jwt.secret);
       const basePath = `http://localhost:${config.img_storage_port}`;
       try {
         await checkPermissions(datasetId, payload);
-        let opticalImageIds = await pg.select('id').from('optical_image').where('ds_id', '=', datasetId);
-        let rawOpticalImage = await pg.select('optical_image').from('dataset').where('id','=',datasetId);
-        Array.prototype.push.apply(opticalImageIds, rawOpticalImage);
-        opticalImageIds.forEach((Image) => {
-          if (Image.id){ //to delete zoomed Image
-            let url = basePath + `${config.img_upload.categories.optical_image.path}delete/${Image.id}`;
-            fetch(url, {
-              method: 'delete'
-            })
-          } else if (Image.optical_image){ // to delete raw optical Image
-            let url = basePath +`${config.img_upload.categories.raw_optical_image.path}delete/${Image.optical_image}`;
-            fetch(url, {
-              method: 'delete'
-            })
-          }
+        let opticalImageIds, rawOpticalImage = await pg.select('id').from('optical_image').where('ds_id', '=', datasetId)
+        let rawOpticalImage = await pg.select('optical_image').from('dataset').where('id', '=', datasetId);
+        await opticalImageIds.forEach(Image => {
+          allUrls.push(basePath + `${config.img_upload.categories.optical_image.path}delete/${Image.id}`)
+        });
+        await rawOpticalImage.forEach(Image => {
+          allUrls.push(basePath + `${config.img_upload.categories.raw_optical_image.path}delete/${Image.optical_image}`)
+        });
+        await allUrls.forEach(url => {
+          fetch(url, {
+            method: 'delete'
+          }).catch(e => logger.error(e.message))
         });
         await pg('dataset').update({optical_image: pg.raw('NULL'), transform: pg.raw('NULL')}).where('id','=',datasetId);
         await pg('optical_image').where('ds_id', '=', datasetId).del();
-        return 'Image was successfully deleted'
+        return 'Images were successfully deleted'
       } catch (e) {
         logger.error(e.message);
         return e.message;

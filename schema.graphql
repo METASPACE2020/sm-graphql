@@ -19,11 +19,6 @@ type Analyzer {
   resolvingPower(mz: Float!): Float!
 }
 
-type FdrCountsNumber {
-  level: Int
-  counts: Int
-}
-
 enum AnnotationOrderBy {
   ORDER_BY_MZ
   ORDER_BY_MSM
@@ -47,6 +42,11 @@ enum JobStatus {
   STARTED,
   FINISHED,
   FAILED
+}
+
+type fdrCountsNumber {
+  levels: [Float]
+  counts: [Float]
 }
 
 type Dataset {
@@ -75,7 +75,7 @@ type Dataset {
   status: JobStatus
   inputPath: String
   uploadDateTime: String
-  fdrCounts: FdrCountsNumber
+  fdrCounts(minFdr: Float, maxFdr: Float): fdrCountsNumber
 }
 
 # fields of categorical type
@@ -241,7 +241,7 @@ type Query {
   allDatasets(orderBy: DatasetOrderBy = ORDER_BY_DATE,
               sortingOrder: SortingOrder = DESCENDING,
               filter: DatasetFilter = {}, simpleQuery: String,
-              offset: Int = 0, limit: Int = 10): [Dataset!]!
+              offset: Int = 0, limit: Int = 10, minFdr: Float, maxFdr: Float): [Dataset!]!
 
   allAnnotations(orderBy: AnnotationOrderBy = ORDER_BY_MSM,
                  sortingOrder: SortingOrder = DESCENDING,
