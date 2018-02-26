@@ -257,21 +257,24 @@ const Resolvers = {
       return ds._source.ds_upload_dt;
     },
 
-    fdrCounts(ds, {minFdr, maxFdr}) {
-      if (minFdr === maxFdr) {minFdr = 0}
-      let allLvlCounts = ds._source.annotation_counts[0].counts;
-      let fdrLevels = [];
-      let fdrCounts = [];
-      allLvlCounts.forEach(Level => {
-        if (Level.level >= minFdr && Level.level <= maxFdr) {
-          fdrLevels.push(Level.level);
-          fdrCounts.push(Level.n);
+    fdrCounts(ds, {inpFdrLvls}) {
+      if(ds._source.ds_status == 'FINISHED') {
+        let inpAllLvlCounts = ds._source.annotation_counts[0].counts;
+        let outfdrLvls = [], outFdrCounts = [];
+        inpFdrLvls.forEach(lvl => {
+          for (let lvlCount of inpAllLvlCounts) {
+            if (lvlCount.level === lvl) {
+              outfdrLvls.push(lvlCount.level);
+              outFdrCounts.push(lvlCount.n);
+              break;
+            }
+          }
+        });
+        return {
+          'levels': outfdrLvls,
+          'counts': outFdrCounts
         }
-      });
-      return {
-        'levels': fdrLevels,
-        'counts': fdrCounts
-      };
+      }
     }
   },
 
@@ -530,7 +533,6 @@ const Resolvers = {
       }
       const payload = jwt.decode(input.jwt, config.jwt.secret);
       try {
-        logger.info(input);
         await checkPermissions(datasetId, payload);
         const url = `http://${config.services.sm_engine_api_host}/v1/datasets/${datasetId}/add-optical-image`;
         const body = {url: imageUrl, transform};
@@ -552,7 +554,7 @@ const Resolvers = {
       const basePath = `http://localhost:${config.img_storage_port}`;
       try {
         await checkPermissions(datasetId, payload);
-        let opticalImageIds, rawOpticalImage = await pg.select('id').from('optical_image').where('ds_id', '=', datasetId)
+        let opticalImageIds = await pg.select('id').from('optical_image').where('ds_id', '=', datasetId);
         let rawOpticalImage = await pg.select('optical_image').from('dataset').where('id', '=', datasetId);
         await opticalImageIds.forEach(Image => {
           allUrls.push(basePath + `${config.img_upload.categories.optical_image.path}delete/${Image.id}`)
@@ -563,8 +565,9 @@ const Resolvers = {
         await allUrls.forEach(url => {
           fetch(url, {
             method: 'delete'
-          }).catch(e => logger.error(e.message))
+          }).catch(e => logger.error(`Delete optical image error ${e.message}`))
         });
+        // TODO move all mutation steps to SM Engine
         await pg('dataset').update({optical_image: pg.raw('NULL'), transform: pg.raw('NULL')}).where('id','=',datasetId);
         await pg('optical_image').where('ds_id', '=', datasetId).del();
         return 'Images were successfully deleted'
