@@ -565,18 +565,6 @@ const Resolvers = {
       const smAPIUrl = `http://${config.services.sm_engine_api_host}/v1/datasets/${datasetId}/del-optical-image`;
       try {
         await checkPermissions(datasetId, payload);
-        let rawOpticalImage = await pg.select('optical_image').from('dataset').where('id', '=', datasetId);
-        let opticalImageIds = await pg.select('id').from('optical_image').where('ds_id', '=', datasetId);
-        allUrls.push(basePath +
-            `${config.img_upload.categories.raw_optical_image.path}delete/${rawOpticalImage[0].optical_image}`);
-        opticalImageIds.forEach(image => {
-          allUrls.push(basePath + `${config.img_upload.categories.optical_image.path}delete/${image.id}`)
-        });
-        for (let url of allUrls) {
-          let res = await fetch(url, {
-            method: 'delete'});
-          checkFetchRes(res);
-        }
         let dbDelFetch = await fetch(smAPIUrl, {
           method: 'POST',
           body: JSON.stringify({datasetId}),
