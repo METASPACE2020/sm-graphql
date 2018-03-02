@@ -77,6 +77,15 @@ function baseDatasetQuery() {
   });
 }
 
+function checkFetchRes(resp) {
+  if (resp.status >= 200 && resp.status < 300) {
+    return resp
+  }
+  else {
+    throw new Error(`An error occurred during fetch request - status ${resp.status}`);
+  }
+}
+
 const Resolvers = {
   Person: {
     name(obj) { return obj.First_Name; },
@@ -258,22 +267,21 @@ const Resolvers = {
     },
 
     fdrCounts(ds, {inpFdrLvls}) {
-      if(ds._source.ds_status == 'FINISHED') {
+      let outFdrLvls = [], outFdrCounts = [];
+      if(ds._source.annotation_counts && ds._source.ds_status === 'FINISHED') {
         let inpAllLvlCounts = ds._source.annotation_counts[0].counts;
-        let outfdrLvls = [], outFdrCounts = [];
         inpFdrLvls.forEach(lvl => {
-          for (let lvlCount of inpAllLvlCounts) {
+          inpAllLvlCounts.find(lvlCount => {
             if (lvlCount.level === lvl) {
-              outfdrLvls.push(lvlCount.level);
+              outFdrLvls.push(lvlCount.level);
               outFdrCounts.push(lvlCount.n);
-              break;
             }
-          }
+          })
         });
-        return {
-          'levels': outfdrLvls,
-          'counts': outFdrCounts
-        }
+      }
+      return {
+        'levels': outFdrLvls,
+        'counts': outFdrCounts
       }
     }
   },
@@ -521,6 +529,7 @@ const Resolvers = {
 
     async addOpticalImage(_, {input}) {
       let {datasetId, imageUrl, transform} = input;
+      const basePath = `http://localhost:${config.img_storage_port}`;
       if (imageUrl[0] == '/') {
         // imageUrl comes from the web application and should not include host/port.
         //
@@ -529,17 +538,18 @@ const Resolvers = {
         // if internal network is used.
         //
         // TODO support image storage running on a separate host
-        imageUrl = 'http://localhost:' + config.img_storage_port + imageUrl;
+        imageUrl = basePath + imageUrl;
       }
       const payload = jwt.decode(input.jwt, config.jwt.secret);
       try {
         await checkPermissions(datasetId, payload);
         const url = `http://${config.services.sm_engine_api_host}/v1/datasets/${datasetId}/add-optical-image`;
         const body = {url: imageUrl, transform};
-        await fetch(url, {
+        let processOptImage = await fetch(url, {
           method: 'POST',
           body: JSON.stringify(body),
           headers: {'Content-Type': 'application/json'}});
+        await checkFetchRes(processOptImage);
         return 'success';
       } catch (e) {
         logger.error(e.message);
@@ -552,25 +562,27 @@ const Resolvers = {
       let allUrls = [];
       const payload = jwt.decode(args.jwt, config.jwt.secret);
       const basePath = `http://localhost:${config.img_storage_port}`;
+      const smAPIUrl = `http://${config.services.sm_engine_api_host}/v1/datasets/${datasetId}/del-optical-image`;
       try {
         await checkPermissions(datasetId, payload);
-        let opticalImageIds = await pg.select('id').from('optical_image').where('ds_id', '=', datasetId);
+
         let rawOpticalImage = await pg.select('optical_image').from('dataset').where('id', '=', datasetId);
-        await opticalImageIds.forEach(Image => {
-          allUrls.push(basePath + `${config.img_upload.categories.optical_image.path}delete/${Image.id}`)
-        });
-        await rawOpticalImage.forEach(Image => {
-          allUrls.push(basePath + `${config.img_upload.categories.raw_optical_image.path}delete/${Image.optical_image}`)
-        });
-        await allUrls.forEach(url => {
-          fetch(url, {
-            method: 'delete'
-          }).catch(e => logger.error(`Delete optical image error ${e.message}`))
-        });
-        // TODO move all mutation steps to SM Engine
-        await pg('dataset').update({optical_image: pg.raw('NULL'), transform: pg.raw('NULL')}).where('id','=',datasetId);
-        await pg('optical_image').where('ds_id', '=', datasetId).del();
-        return 'Images were successfully deleted'
+        let opticalImageIds = await pg.select('id').from('optical_image').where('ds_id', '=', datasetId);
+        await allUrls.push(basePath +
+            `${config.img_upload.categories.raw_optical_image.path}delete/${rawOpticalImage[0].optical_image}`);
+        for (let image of opticalImageIds) {
+          await allUrls.push(basePath + `${config.img_upload.categories.optical_image.path}delete/${image.id}`)}
+        for (let url of allUrls) {
+          let res = await fetch(url, {
+            method: 'delete'});
+          await checkFetchRes(res);
+        }
+        let dbDelFetch = await fetch (smAPIUrl, {
+          method: 'POST',
+          body: JSON.stringify({datasetId}),
+          headers: {'Content-Type': 'application/json'}});
+        await checkFetchRes(dbDelFetch);
+        return 'success';
       } catch (e) {
         logger.error(e.message);
         return e.message;

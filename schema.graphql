@@ -44,9 +44,9 @@ enum JobStatus {
   FAILED
 }
 
-type FdrCountsNumber {
-  levels: [Float]
-  counts: [Float]
+type FdrCounts {
+  levels: [Float!]!
+  counts: [Float!]!
 }
 
 type Dataset {
@@ -75,7 +75,7 @@ type Dataset {
   status: JobStatus
   inputPath: String
   uploadDateTime: String
-  fdrCounts(inpFdrLvls: [Float]): FdrCountsNumber
+  fdrCounts(inpFdrLvls: [Float!]!): FdrCounts!
 }
 
 # fields of categorical type
@@ -241,7 +241,7 @@ type Query {
   allDatasets(orderBy: DatasetOrderBy = ORDER_BY_DATE,
               sortingOrder: SortingOrder = DESCENDING,
               filter: DatasetFilter = {}, simpleQuery: String,
-              offset: Int = 0, limit: Int = 10, inpFdrLvls: [Float]): [Dataset!]!
+              offset: Int = 0, limit: Int = 10): [Dataset!]!
 
   allAnnotations(orderBy: AnnotationOrderBy = ORDER_BY_MSM,
                  sortingOrder: SortingOrder = DESCENDING,
