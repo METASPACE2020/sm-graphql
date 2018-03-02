@@ -559,13 +559,11 @@ const Resolvers = {
 
     async deleteOpticalImage(_, args) {
       let {datasetId} = args;
-      let allUrls = [];
       const payload = jwt.decode(args.jwt, config.jwt.secret);
-      const basePath = `http://localhost:${config.img_storage_port}`;
-      const smAPIUrl = `http://${config.services.sm_engine_api_host}/v1/datasets/${datasetId}/del-optical-image`;
+      const url = `http://${config.services.sm_engine_api_host}/v1/datasets/${datasetId}/del-optical-image`;
       try {
         await checkPermissions(datasetId, payload);
-        let dbDelFetch = await fetch(smAPIUrl, {
+        let dbDelFetch = await fetch(url, {
           method: 'POST',
           body: JSON.stringify({datasetId}),
           headers: {'Content-Type': 'application/json'}});
