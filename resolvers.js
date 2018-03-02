@@ -78,10 +78,9 @@ function baseDatasetQuery() {
 }
 
 function checkFetchRes(resp) {
-  if (resp.status >= 200 && resp.status < 300) {
+  if (resp.ok) {
     return resp
-  }
-  else {
+  } else {
     throw new Error(`An error occurred during fetch request - status ${resp.status}`);
   }
 }
@@ -271,12 +270,13 @@ const Resolvers = {
       if(ds._source.annotation_counts && ds._source.ds_status === 'FINISHED') {
         let inpAllLvlCounts = ds._source.annotation_counts[0].counts;
         inpFdrLvls.forEach(lvl => {
-          inpAllLvlCounts.find(lvlCount => {
-            if (lvlCount.level === lvl) {
-              outFdrLvls.push(lvlCount.level);
-              outFdrCounts.push(lvlCount.n);
-            }
-          })
+          let findRes = inpAllLvlCounts.find(lvlCount => {
+            return lvlCount.level === lvl
+          });
+          if (findRes) {
+            outFdrLvls.push(findRes.level);
+            outFdrCounts.push(findRes.n);
+          }
         });
       }
       return {
@@ -549,7 +549,7 @@ const Resolvers = {
           method: 'POST',
           body: JSON.stringify(body),
           headers: {'Content-Type': 'application/json'}});
-        await checkFetchRes(processOptImage);
+        checkFetchRes(processOptImage);
         return 'success';
       } catch (e) {
         logger.error(e.message);
@@ -565,23 +565,23 @@ const Resolvers = {
       const smAPIUrl = `http://${config.services.sm_engine_api_host}/v1/datasets/${datasetId}/del-optical-image`;
       try {
         await checkPermissions(datasetId, payload);
-
         let rawOpticalImage = await pg.select('optical_image').from('dataset').where('id', '=', datasetId);
         let opticalImageIds = await pg.select('id').from('optical_image').where('ds_id', '=', datasetId);
-        await allUrls.push(basePath +
+        allUrls.push(basePath +
             `${config.img_upload.categories.raw_optical_image.path}delete/${rawOpticalImage[0].optical_image}`);
-        for (let image of opticalImageIds) {
-          await allUrls.push(basePath + `${config.img_upload.categories.optical_image.path}delete/${image.id}`)}
+        opticalImageIds.forEach(image => {
+          allUrls.push(basePath + `${config.img_upload.categories.optical_image.path}delete/${image.id}`)
+        });
         for (let url of allUrls) {
           let res = await fetch(url, {
             method: 'delete'});
-          await checkFetchRes(res);
+          checkFetchRes(res);
         }
-        let dbDelFetch = await fetch (smAPIUrl, {
+        let dbDelFetch = await fetch(smAPIUrl, {
           method: 'POST',
           body: JSON.stringify({datasetId}),
           headers: {'Content-Type': 'application/json'}});
-        await checkFetchRes(dbDelFetch);
+        checkFetchRes(dbDelFetch);
         return 'success';
       } catch (e) {
         logger.error(e.message);
