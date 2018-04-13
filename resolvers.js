@@ -12,7 +12,7 @@ const config = require('config'),
     metadataUpdateFailedSlackNotify, logger, pubsub, pg} = require("./utils.js");
 
 const ajv = new Ajv({allErrors: true});
-const metadataSchema = require('./src/assets/metadata_schema.json'),
+const metadataSchema = require('./metadata_schema.json'),
     validator = ajv.compile(metadataSchema);
 
 function publishDatasetStatusUpdate(ds_id, status, attempt=1) {
