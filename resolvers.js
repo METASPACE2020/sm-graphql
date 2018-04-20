@@ -388,13 +388,14 @@ const Resolvers = {
 
   Mutation: {
     resubmitDataset: async (_, args) => {
+      let {jwt, datasetId, name, path, metadataJson, priority, sync, delFirst} = args;
       const ds = await fetchDS({id: datasetId});
       if (ds === undefined)
         throw new UserError('DS does not exist');
-      args.name = args.name || ds.name;
-      args.path = ds.input_path;
-      args.metadata = args.metadataJson ? JSON.parse(args.metadataJson) : ds.metadata;
-      return DSMutation.submit(args);
+      name = name || ds.name;
+      path = path || ds.input_path;
+      metadata = (metadataJson !== undefined) ? JSON.parse(metadataJson) : ds.metadata;
+      return DSMutation.submit({jwt, datasetId, name, path, metadata, priority, sync, delFirst});
     },
 
     submitDataset: (_, args) => {
