@@ -227,19 +227,17 @@ input DatasetCountPerGroupInput {
   simpleQuery: String
 }
 
-input DatasetSubmitInput {
-  id: String
-  name: String
-  inputPath: String
-  uploadDT: String
-  isPublic: Boolean = true
-  molDBs: [String!]
-  adducts: [String!]
-  metadataJson: String
+input DatasetCreateInput {
+  name: String!
+  inputPath: String!
+  uploadDT: String!
+  isPublic: Boolean! = true
+  molDBs: [String!]!
+  adducts: [String!]!
+  metadataJson: String!
 }
 
 input DatasetUpdateInput {
-  id: String
   name: String
   uploadDT: String
   isPublic: Boolean = true
@@ -315,15 +313,15 @@ type Query {
 }
 
 type Mutation {
-  submitDataset(input: DatasetSubmitInput!, priority: Int=0, delFirst: Boolean=false): String!
+  createDataset(id: String, input: DatasetCreateInput!, priority: Int=0): String!
+
+  updateDataset(id: String!, input: DatasetUpdateInput!,
+    reprocess: Boolean=false, delFirst: Boolean=false, priority: Int=0): String!
+
+  deleteDataset(id: String!, priority: Int=0): String!
 
   # for dev purposes only
-  resubmitDataset(datasetId: String, priority: Int=0, delFirst: Boolean=false): String!
-
-  # TODO: consider renaming to updateDataset
-  updateMetadata(input: DatasetUpdateInput!, priority: Int=0): String!
-
-  deleteDataset(datasetId: String!): String!
+  reprocessDataset(id: String, priority: Int=0, delFirst: Boolean=false): String!
 
   addOpticalImage(input: AddOpticalImageInput!): String!
 
