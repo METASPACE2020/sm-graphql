@@ -1,3 +1,5 @@
+# This project has been migrated into https://github.com/metaspace2020/metaspace
+
 # sm-graphql
 
 GraphQL interface to SM engine (prototype)
